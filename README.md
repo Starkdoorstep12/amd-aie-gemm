@@ -1,76 +1,43 @@
-# Source Directory
+# AMD AIE-ML GEMM Accelerator
 
-This directory contains all source files required to build, configure, and execute
-the tiled GEMM kernel on the AMD Versal AI Engine (AIE) as part of the project
-“High-Performance GEMM for Vector Retrieval on Edge NPUs (AMD AIE)”.
+This repository contains my AMD Versal AIE-ML accelerator exploration conducted as part of the HAI-25 Edge AI project.
 
-The components in this folder implement:
+The work focuses on mapping vector-search style matrix multiplication workloads onto AMD AI Engine hardware using MLIR-AIE and XRT.
 
-• Host-side execution logic (XRT runtime, buffer management)
-• AIE kernel generation and graph construction
-• Preprocessing for real embedding datasets (SIFT-small)
-• Execution pipeline for performance benchmarking
+## Highlights
 
----
+- Tiled GEMM implementation on AMD Versal AIE-ML
+- XRT host runtime orchestration
+- DMA/FIFO streaming pipeline design
+- Memory-layout reconstruction and verification
+- Performance benchmarking and throughput analysis
 
-## File Overview
+## Technologies
 
-### 1. test.cpp
-Host program responsible for:
-- Allocating input/output buffers using XRT.
-- Loading the xclbin and dispatching the AIE kernel.
-- Managing row-stride–aligned output buffers.
-- Reading SIFT-small vectors and preparing A and B tiles.
-- Partially reconstructing output tiles (column-major → row-major within tiles).
-- Reporting execution latency.
+- C++
+- MLIR-AIE
+- XRT
+- AMD Versal AIE-ML
+- DMA / FIFO Streaming
 
-This is the main entry point for executing the GEMM kernel on hardware.
+## Performance
 
----
+Workload Configuration:
+- GEMM (128 × 128 × 10240)
+- Tile Size: 32 × 64 × 64
+- AIE Grid: 4 × 4
 
-### 2. mm.cc
-MLIR-AIE kernel implementation for the 32×64×64 GEMM tile configuration.
+Results:
+- Peak Throughput: 675.1 GFLOPS
+- Peak Efficiency: 66% of theoretical AIE2 peak
+- Best Latency: 497 µs
+- Typical Throughput: 500–600 GFLOPS
+- Typical Latency: 550–700 µs
 
-Responsibilities:
-- Defines the compute kernel that multiplies A (32×64) by B (64×64).
-- Uses AIE intrinsics for vector MAC operations.
-- Assumes column-major tile format for B and accumulator layout compatible with AIE SIMD width.
-- Matches the pre-compiled kernel format used by MLIR-AIE.
+Highlights:
+- Up to ~100× speedup over CPU baseline
+- Stable DMA-streamed execution on AMD Versal AIE-ML
 
----
+## Attribution
 
-### 3. array.py
-Python script that builds the full AIE computation graph.
-
-Functionality:
-- Constructs a configurable grid of compute tiles (default: 4×4).
-- Inserts Object FIFOs for streaming A and B tiles.
-- Generates ND-DMA descriptors for multi-dimensional tile movement.
-- Outputs the final .inst file required by the host program.
-- Encodes the hierarchical memory traffic pattern:
-  DRAM → SHIM → L2 → L1 → AIE cores → Output FIFO.
-
----
-
-### 4. preprocessing/
-Utility scripts for preparing the SIFT-small dataset.
-
-Tasks:
-- Reading `.fvecs` and `.ivecs` formats.
-- Normalizing or converting embeddings as needed.
-- Arranging embeddings into contiguous buffers matching AIE tile boundaries.
-- Generating packed A and B matrices for the GEMM workload.
-
----
-
-## Usage
-
-Typical workflow inside `src/`:
-
-1. Preprocess SIFT-small vectors:
-python3 preprocessing/preprocess_sift.py
-2. Generate AIE graph and instructions:
-python3 array.py
-
-3. Compile host code:
-
+This repository contains only the AMD AIE-ML portion of the broader HAI-25 Edge AI project and does not include the Qualcomm QIDK or CPU baseline implementations developed by other team members.
